@@ -1,29 +1,28 @@
-import { ScrollView, StyleSheet, View } from "react-native";
+import { useEffect, useRef } from "react";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 
-import {
-  AppText,
-  PrimaryButton,
-  Screen,
-  SecondaryButton,
-  StateMessage,
-  WorkoutBlockCard,
-  WorkoutHeader,
-} from "../components";
-import {
-  getOrderedBlocks,
-  type WorkoutSession,
-  type WorkoutTemplate,
-} from "../domain";
+import { AppText, Screen, StateMessage } from "../components";
+import type { WorkoutSession, WorkoutTemplate } from "../domain";
 import { useAsyncLoad } from "../hooks/useAsyncLoad";
+import { useWorkoutRun } from "../hooks/useWorkoutRun";
 import type { RootStackScreenProps } from "../navigation/types";
 import { workoutRepository } from "../services/workoutRepository";
 import { spacing } from "../theme";
 import {
   buildExerciseNames,
-  SESSION_STATUS_LABELS,
-  WORKOUT_FOCUS_LABELS,
   type ExerciseNames,
 } from "../utils/workoutPresentation";
+import { ActiveRunView } from "./ActiveWorkoutViews";
+
+type ActiveWorkoutNavigation =
+  RootStackScreenProps<"ActiveWorkout">["navigation"];
 
 interface ActiveData {
   session: WorkoutSession;
@@ -31,32 +30,96 @@ interface ActiveData {
   exerciseNames: ExerciseNames;
 }
 
-interface TimerSlotProps {
-  onLeave: () => void;
+interface ActiveWorkoutContentProps extends ActiveData {
+  navigation: ActiveWorkoutNavigation;
 }
 
-function TimerSlot({ onLeave }: TimerSlotProps) {
+function ActiveWorkoutContent({
+  navigation,
+  session,
+  template,
+  exerciseNames,
+}: ActiveWorkoutContentProps) {
+  const run = useWorkoutRun(template, session);
+  const allowLeaveRef = useRef(false);
+  const sessionStatus = run.state.session.status;
+
+  useEffect(() => {
+    return navigation.addListener("beforeRemove", (event) => {
+      if (allowLeaveRef.current || sessionStatus === "completed") {
+        return;
+      }
+      event.preventDefault();
+      Alert.alert("QUITTER LA SÉANCE ?", "Ta séance en cours sera conservée.", [
+        { text: "ANNULER", style: "cancel" },
+        {
+          text: "QUITTER",
+          onPress: () => {
+            allowLeaveRef.current = true;
+            navigation.dispatch(event.data.action);
+          },
+        },
+      ]);
+    });
+  }, [navigation, sessionStatus]);
+
+  const handleFinish = async (): Promise<void> => {
+    const saved = await run.finish();
+    if (!saved) {
+      return;
+    }
+    allowLeaveRef.current = true;
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.replace("Dashboard");
+    }
+  };
+
   return (
-    <View style={styles.footer}>
-      <AppText
-        variant="caption"
-        tone="secondary"
-        align="center"
-        style={styles.footnote}
+    <Screen>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        La séance est enregistrée. Tu peux la quitter sans la perdre.
-      </AppText>
-      <PrimaryButton
-        label="TIMER BIENTÔT DISPONIBLE"
-        onPress={onLeave}
-        disabled
-      />
-      <SecondaryButton
-        label="RETOUR AU DASHBOARD"
-        onPress={onLeave}
-        style={styles.leave}
-      />
-    </View>
+        <View style={styles.topBar}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Quitter la séance"
+            hitSlop={12}
+            onPress={() => navigation.goBack()}
+          >
+            <AppText variant="label" tone="secondary">
+              ‹ QUITTER
+            </AppText>
+          </Pressable>
+          <AppText variant="label" tone="accent">
+            {template.name.toUpperCase()}
+          </AppText>
+        </View>
+
+        {run.saveError ? (
+          <AppText
+            variant="caption"
+            tone="accent"
+            align="center"
+            style={styles.saveError}
+          >
+            Sauvegarde impossible pour le moment. Nouvelle tentative à la
+            prochaine saisie.
+          </AppText>
+        ) : null}
+
+        <ActiveRunView
+          run={run}
+          template={template}
+          exerciseNames={exerciseNames}
+          onFinish={() => {
+            void handleFinish();
+          }}
+        />
+      </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
@@ -108,74 +171,27 @@ export function ActiveWorkoutScreen({
     );
   }
 
-  const { session, template, exerciseNames } = state.data;
-  const [currentBlock, ...nextBlocks] = getOrderedBlocks(template);
-
   return (
-    <Screen>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <WorkoutHeader
-          title={template.name.toUpperCase()}
-          focus={WORKOUT_FOCUS_LABELS[template.code]}
-          badge={SESSION_STATUS_LABELS[session.status]}
-        />
-
-        {currentBlock !== undefined ? (
-          <WorkoutBlockCard
-            block={currentBlock}
-            position={1}
-            exerciseNames={exerciseNames}
-            highlighted
-            style={styles.block}
-          />
-        ) : null}
-
-        {nextBlocks.length > 0 ? (
-          <>
-            <AppText variant="label" tone="secondary" style={styles.nextLabel}>
-              ENSUITE
-            </AppText>
-            {nextBlocks.map((block, index) => (
-              <WorkoutBlockCard
-                key={block.id}
-                block={block}
-                position={index + 2}
-                exerciseNames={exerciseNames}
-                style={styles.block}
-              />
-            ))}
-          </>
-        ) : null}
-      </ScrollView>
-
-      <TimerSlot onLeave={leave} />
-    </Screen>
+    <ActiveWorkoutContent
+      navigation={navigation}
+      session={state.data.session}
+      template={state.data.template}
+      exerciseNames={state.data.exerciseNames}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
+  flex: {
+    flex: 1,
   },
-  block: {
-    marginBottom: spacing.md,
-  },
-  nextLabel: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  footer: {
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
   },
-  footnote: {
-    marginBottom: spacing.md,
-  },
-  leave: {
+  saveError: {
     marginTop: spacing.sm,
   },
 });

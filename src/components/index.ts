@@ -1,7 +1,9 @@
 export { AppText } from "./AppText";
 export { Card } from "./Card";
+export { ClockDisplay } from "./ClockDisplay";
 export { HeroPlaceholder } from "./HeroPlaceholder";
 export { PrimaryButton } from "./PrimaryButton";
+export { RepsInput } from "./RepsInput";
 export { Screen } from "./Screen";
 export { SecondaryButton } from "./SecondaryButton";
 export { StateMessage } from "./StateMessage";
