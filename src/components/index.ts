@@ -3,3 +3,7 @@ export { Card } from "./Card";
 export { HeroPlaceholder } from "./HeroPlaceholder";
 export { PrimaryButton } from "./PrimaryButton";
 export { Screen } from "./Screen";
+export { SecondaryButton } from "./SecondaryButton";
+export { StateMessage } from "./StateMessage";
+export { WorkoutBlockCard } from "./WorkoutBlockCard";
+export { WorkoutHeader } from "./WorkoutHeader";

@@ -52,7 +52,7 @@ export function WelcomeScreen({ navigation }: RootStackScreenProps<"Welcome">) {
 
         <PrimaryButton
           label="COMMENCER"
-          onPress={() => navigation.replace("Dashboard")}
+          onPress={() => navigation.navigate("Dashboard")}
           style={styles.button}
         />
       </Animated.View>
