@@ -10,13 +10,14 @@ import {
   WorkoutHeader,
 } from "../components";
 import {
-  createInProgressSession,
   getOrderedBlocks,
+  startWorkoutSession,
   type WorkoutSessionId,
   type WorkoutTemplate,
 } from "../domain";
 import { useAsyncLoad } from "../hooks/useAsyncLoad";
 import type { RootStackScreenProps } from "../navigation/types";
+import { weightRepository } from "../services/weightRepository";
 import { workoutRepository } from "../services/workoutRepository";
 import { spacing } from "../theme";
 import {
@@ -49,12 +50,12 @@ function WorkoutDetailContent({
     setIsStarting(true);
     setStartFailed(false);
     try {
-      const session = createInProgressSession({
+      /* Dernier poids connu → snapshot bodyweightKg (null si indisponible), puis persistance. */
+      const session = await startWorkoutSession(workoutRepository, {
         templateId: template.id,
         now: Date.now(),
-        bodyweightKg: null,
+        readLatestBodyweightKg: () => weightRepository.getLatestWeightKg(),
       });
-      await workoutRepository.saveSession(session);
       onStarted(session.id);
     } catch {
       setStartFailed(true);

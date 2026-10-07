@@ -30,16 +30,13 @@ interface ComingSoonItem {
 
 const COMING_SOON_ITEMS: readonly ComingSoonItem[] = [
   {
-    key: "progression",
-    title: "PROGRESSION",
-    description: "Suivi de ton évolution",
-  },
-  {
     key: "activities",
     title: "ACTIVITÉS",
     description: "Cardio et activités annexes",
   },
 ];
+
+const noop = (): void => undefined;
 
 interface SessionCardProps {
   summary: TemplateSummary;
@@ -72,11 +69,45 @@ function SessionCard({ summary, onPress }: SessionCardProps) {
             {summary.extraLabel}
           </AppText>
         ) : null}
-        <PrimaryButton
-          label="COMMENCER"
-          onPress={onPress}
+        <View
+          pointerEvents="none"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
           style={styles.sessionButton}
-        />
+        >
+          <PrimaryButton label="COMMENCER" onPress={noop} />
+        </View>
+      </Card>
+    </Pressable>
+  );
+}
+
+interface NavCardProps {
+  title: string;
+  description: string;
+  onPress: () => void;
+}
+
+function NavCard({ title, description, onPress }: NavCardProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Ouvrir ${title}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+    >
+      <Card>
+        <View style={styles.cardRow}>
+          <View style={styles.cardText}>
+            <AppText variant="heading">{title}</AppText>
+            <AppText variant="caption" tone="secondary">
+              {description}
+            </AppText>
+          </View>
+          <AppText variant="title" tone="accent">
+            ›
+          </AppText>
+        </View>
       </Card>
     </Pressable>
   );
@@ -111,8 +142,7 @@ export function DashboardScreen({
             Prêt à progresser ?
           </AppText>
           <AppText variant="body" tone="secondary">
-            Choisis ta séance. Le reste du centre de commandement arrive étape
-            par étape.
+            Choisis ta séance, ou consulte ton évolution.
           </AppText>
         </View>
 
@@ -136,6 +166,17 @@ export function DashboardScreen({
               />
             ))
           : null}
+
+        <NavCard
+          title="HISTORIQUE"
+          description="Tes séances terminées"
+          onPress={() => navigation.navigate("History")}
+        />
+        <NavCard
+          title="PROGRESSION"
+          description="Statistiques et poids du corps"
+          onPress={() => navigation.navigate("Progression")}
+        />
 
         {COMING_SOON_ITEMS.map((item) => (
           <Card key={item.key} style={styles.card}>

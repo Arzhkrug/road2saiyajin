@@ -4,5 +4,6 @@ export * from "./ids";
 export * from "./seed";
 export * from "./sessions";
 export * from "./run";
+export * from "./history";
 export * from "./validation";
 export * from "./workoutRepository";

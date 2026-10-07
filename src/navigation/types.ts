@@ -7,6 +7,9 @@ export type RootStackParamList = {
   Dashboard: undefined;
   WorkoutDetail: { templateId: WorkoutTemplateId };
   ActiveWorkout: { sessionId: WorkoutSessionId };
+  History: undefined;
+  SessionDetail: { sessionId: WorkoutSessionId };
+  Progression: undefined;
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> =
