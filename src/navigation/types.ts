@@ -10,6 +10,7 @@ export type RootStackParamList = {
   History: undefined;
   SessionDetail: { sessionId: WorkoutSessionId };
   Progression: undefined;
+  Activities: undefined;
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> =

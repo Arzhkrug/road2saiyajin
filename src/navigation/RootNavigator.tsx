@@ -9,6 +9,7 @@ import {
 } from "@react-navigation/native-stack";
 
 import { ActiveWorkoutScreen } from "../screens/ActiveWorkoutScreen";
+import { ActivitiesScreen } from "../screens/ActivitiesScreen";
 import { DashboardScreen } from "../screens/DashboardScreen";
 import { HistoryScreen } from "../screens/HistoryScreen";
 import { ProgressionScreen } from "../screens/ProgressionScreen";
@@ -77,6 +78,11 @@ export function RootNavigator() {
         <Stack.Screen
           name="Progression"
           component={ProgressionScreen}
+          options={headerScreenOptions}
+        />
+        <Stack.Screen
+          name="Activities"
+          component={ActivitiesScreen}
           options={headerScreenOptions}
         />
       </Stack.Navigator>

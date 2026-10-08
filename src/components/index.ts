@@ -1,3 +1,5 @@
+export { ActivityCard } from "./ActivityCard";
+export { ActivityForm, type ActivityFormValues } from "./ActivityForm";
 export { AppText } from "./AppText";
 export { Card } from "./Card";
 export { ClockDisplay } from "./ClockDisplay";

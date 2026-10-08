@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import {
@@ -9,8 +10,11 @@ import {
 } from "../components";
 import { useAsyncLoad } from "../hooks/useAsyncLoad";
 import type { RootStackScreenProps } from "../navigation/types";
+import { activityRepository } from "../services/activityRepository";
 import { workoutRepository } from "../services/workoutRepository";
-import { colors, radius, spacing } from "../theme";
+import { spacing } from "../theme";
+import { ACTIVITY_TYPE_NAMES } from "../utils/activityPresentation";
+import { formatActivityDuration, formatDayLabel } from "../utils/format";
 import {
   buildExerciseNames,
   summarizeTemplate,
@@ -21,20 +25,6 @@ interface SessionEntry {
   templateId: string;
   summary: TemplateSummary;
 }
-
-interface ComingSoonItem {
-  key: string;
-  title: string;
-  description: string;
-}
-
-const COMING_SOON_ITEMS: readonly ComingSoonItem[] = [
-  {
-    key: "activities",
-    title: "ACTIVITÉS",
-    description: "Cardio et activités annexes",
-  },
-];
 
 const noop = (): void => undefined;
 
@@ -85,10 +75,11 @@ function SessionCard({ summary, onPress }: SessionCardProps) {
 interface NavCardProps {
   title: string;
   description: string;
+  detail?: string | null;
   onPress: () => void;
 }
 
-function NavCard({ title, description, onPress }: NavCardProps) {
+function NavCard({ title, description, detail = null, onPress }: NavCardProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -103,6 +94,11 @@ function NavCard({ title, description, onPress }: NavCardProps) {
             <AppText variant="caption" tone="secondary">
               {description}
             </AppText>
+            {detail !== null ? (
+              <AppText variant="caption" tone="accent">
+                {detail}
+              </AppText>
+            ) : null}
           </View>
           <AppText variant="title" tone="accent">
             ›
@@ -127,6 +123,28 @@ export function DashboardScreen({
       summary: summarizeTemplate(template, names),
     }));
   }, []);
+
+  /* Recharge la dernière activité à chaque retour sur le Dashboard. */
+  const [focusCount, setFocusCount] = useState(0);
+  useEffect(
+    () =>
+      navigation.addListener("focus", () =>
+        setFocusCount((count) => count + 1),
+      ),
+    [navigation],
+  );
+
+  const lastActivity = useAsyncLoad<string | null>(async () => {
+    try {
+      const [latest] = await activityRepository.getRecent(1);
+      if (latest === undefined) {
+        return null;
+      }
+      return `Dernière activité : ${ACTIVITY_TYPE_NAMES[latest.type]} · ${formatActivityDuration(latest.durationMinutes)} · ${formatDayLabel(latest.startedAt, Date.now())}`;
+    } catch {
+      return null;
+    }
+  }, [focusCount]);
 
   return (
     <Screen>
@@ -169,7 +187,7 @@ export function DashboardScreen({
 
         <NavCard
           title="HISTORIQUE"
-          description="Tes séances terminées"
+          description="Tes séances et activités"
           onPress={() => navigation.navigate("History")}
         />
         <NavCard
@@ -177,24 +195,12 @@ export function DashboardScreen({
           description="Statistiques et poids du corps"
           onPress={() => navigation.navigate("Progression")}
         />
-
-        {COMING_SOON_ITEMS.map((item) => (
-          <Card key={item.key} style={styles.card}>
-            <View style={styles.cardRow}>
-              <View style={styles.cardText}>
-                <AppText variant="heading">{item.title}</AppText>
-                <AppText variant="caption" tone="secondary">
-                  {item.description}
-                </AppText>
-              </View>
-              <View style={styles.badge}>
-                <AppText variant="caption" tone="accent">
-                  Bientôt disponible
-                </AppText>
-              </View>
-            </View>
-          </Card>
-        ))}
+        <NavCard
+          title="ACTIVITÉS"
+          description="Boxe & activités annexes"
+          detail={lastActivity.status === "ready" ? lastActivity.data : null}
+          onPress={() => navigation.navigate("Activities")}
+        />
       </ScrollView>
     </Screen>
   );
@@ -238,11 +244,5 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: spacing.md,
     gap: spacing.xs,
-  },
-  badge: {
-    backgroundColor: colors.accentMuted,
-    borderRadius: radius.pill,
-    paddingVertical: spacing.xs + 2,
-    paddingHorizontal: spacing.md - 4,
   },
 });
