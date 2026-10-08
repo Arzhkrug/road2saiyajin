@@ -4,6 +4,7 @@ export { ClockDisplay } from "./ClockDisplay";
 export { HeroPlaceholder } from "./HeroPlaceholder";
 export { PeriodSelector } from "./PeriodSelector";
 export { PrimaryButton } from "./PrimaryButton";
+export { RecommendationCard, type LocalDecision } from "./RecommendationCard";
 export { RepsInput } from "./RepsInput";
 export { Screen } from "./Screen";
 export { SecondaryButton } from "./SecondaryButton";

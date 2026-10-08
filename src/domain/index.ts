@@ -4,3 +4,4 @@ export * from "./timer";
 export * from "./workouts";
 export * from "./stats";
 export * from "./body";
+export * from "./progression";

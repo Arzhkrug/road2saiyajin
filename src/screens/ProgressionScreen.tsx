@@ -17,18 +17,22 @@ import {
   Card,
   PeriodSelector,
   PrimaryButton,
+  RecommendationCard,
   Screen,
   StateMessage,
   StatTile,
   WeightChart,
+  type LocalDecision,
 } from "../components";
 import {
+  buildRecommendations,
   getWeightHistory,
   getWeightSummary,
   getWorkoutStats,
   parseWeightInput,
   PERIOD_OPTIONS,
   type PeriodDays,
+  type Recommendation,
   type WeightMeasurement,
   type WorkoutSession,
   type WorkoutTemplate,
@@ -50,6 +54,7 @@ interface ProgressionData {
   templates: readonly WorkoutTemplate[];
   measurements: WeightMeasurement[];
   exerciseNames: ExerciseNames;
+  recommendations: Recommendation[];
 }
 
 const buzz = (run: () => Promise<void>): void => {
@@ -73,15 +78,27 @@ function ProgressionContent({ data }: ContentProps) {
   const [text, setText] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [decisions, setDecisions] = useState<Record<string, LocalDecision>>({});
 
   const stats = useMemo(
     () => getWorkoutStats(data.sessions, data.templates),
     [data.sessions, data.templates],
   );
 
+  const visibleRecommendations = data.recommendations.filter(
+    (recommendation) =>
+      recommendation.action !== "insufficient_data" ||
+      recommendation.metrics.sessionCount > 0,
+  );
+
   const history = getWeightHistory(measurements, period, Date.now());
   const summary = getWeightSummary(history);
   const recent = [...measurements].reverse().slice(0, 10);
+
+  const handleDecide = (exerciseId: string, decision: LocalDecision): void => {
+    setDecisions((previous) => ({ ...previous, [exerciseId]: decision }));
+    buzz(() => Haptics.selectionAsync());
+  };
 
   const handleAdd = async (): Promise<void> => {
     if (isSaving) {
@@ -183,6 +200,33 @@ function ProgressionContent({ data }: ContentProps) {
               value={String(stats.averageRepsPerPerformance).replace(".", ",")}
             />
           </View>
+
+          <AppText variant="label" tone="secondary" style={styles.sectionLabel}>
+            RECOMMANDATIONS
+          </AppText>
+          {visibleRecommendations.length === 0 ? (
+            <Card>
+              <AppText variant="body" tone="secondary">
+                Termine au moins 3 séances pour obtenir des recommandations par
+                exercice.
+              </AppText>
+            </Card>
+          ) : (
+            visibleRecommendations.map((recommendation) => (
+              <RecommendationCard
+                key={recommendation.exerciseId}
+                name={getExerciseName(
+                  data.exerciseNames,
+                  recommendation.exerciseId,
+                )}
+                recommendation={recommendation}
+                decision={decisions[recommendation.exerciseId]}
+                onDecide={(decision) =>
+                  handleDecide(recommendation.exerciseId, decision)
+                }
+              />
+            ))
+          )}
 
           {stats.bestByExercise.length > 0 ? (
             <>
@@ -359,6 +403,12 @@ export function ProgressionScreen({
       templates,
       measurements,
       exerciseNames: buildExerciseNames(exercises),
+      recommendations: buildRecommendations({
+        sessions,
+        templates,
+        exercises,
+        now: Date.now(),
+      }),
     };
   }, []);
 
