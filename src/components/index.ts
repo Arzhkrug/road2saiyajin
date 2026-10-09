@@ -1,6 +1,10 @@
 export { ActivityCard } from "./ActivityCard";
 export { ActivityForm, type ActivityFormValues } from "./ActivityForm";
 export { AppText } from "./AppText";
+export {
+  BodyCompositionSection,
+  type CompositionFormValues,
+} from "./BodyCompositionSection";
 export { Card } from "./Card";
 export { ClockDisplay } from "./ClockDisplay";
 export { HeroPlaceholder } from "./HeroPlaceholder";

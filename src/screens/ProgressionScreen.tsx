@@ -14,6 +14,7 @@ import {
 
 import {
   AppText,
+  BodyCompositionSection,
   Card,
   PeriodSelector,
   PrimaryButton,
@@ -22,6 +23,7 @@ import {
   StateMessage,
   StatTile,
   WeightChart,
+  type CompositionFormValues,
   type LocalDecision,
 } from "../components";
 import {
@@ -31,6 +33,7 @@ import {
   getWorkoutStats,
   parseWeightInput,
   PERIOD_OPTIONS,
+  type BodyCompositionMeasurement,
   type PeriodDays,
   type Recommendation,
   type WeightMeasurement,
@@ -39,6 +42,7 @@ import {
 } from "../domain";
 import { useAsyncLoad } from "../hooks/useAsyncLoad";
 import type { RootStackScreenProps } from "../navigation/types";
+import { bodyCompositionRepository } from "../services/bodyCompositionRepository";
 import { weightRepository } from "../services/weightRepository";
 import { workoutRepository } from "../services/workoutRepository";
 import { colors, radius, spacing, typography } from "../theme";
@@ -53,6 +57,7 @@ interface ProgressionData {
   sessions: WorkoutSession[];
   templates: readonly WorkoutTemplate[];
   measurements: WeightMeasurement[];
+  compositions: BodyCompositionMeasurement[];
   exerciseNames: ExerciseNames;
   recommendations: Recommendation[];
 }
@@ -74,6 +79,9 @@ function ProgressionContent({ data }: ContentProps) {
   const [measurements, setMeasurements] = useState<WeightMeasurement[]>(
     data.measurements,
   );
+  const [compositions, setCompositions] = useState<
+    BodyCompositionMeasurement[]
+  >(data.compositions);
   const [period, setPeriod] = useState<PeriodDays>(30);
   const [text, setText] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
@@ -154,6 +162,18 @@ function ProgressionContent({ data }: ContentProps) {
         },
       ],
     );
+  };
+
+  const handleAddComposition = async (
+    values: CompositionFormValues,
+  ): Promise<void> => {
+    await bodyCompositionRepository.add({ recordedAt: Date.now(), ...values });
+    setCompositions(await bodyCompositionRepository.getAll());
+  };
+
+  const handleDeleteComposition = async (id: string): Promise<void> => {
+    await bodyCompositionRepository.delete(id);
+    setCompositions(await bodyCompositionRepository.getAll());
   };
 
   return (
@@ -382,6 +402,13 @@ function ProgressionContent({ data }: ContentProps) {
               </Card>
             </>
           ) : null}
+
+          <BodyCompositionSection
+            measurements={compositions}
+            now={Date.now()}
+            onAdd={handleAddComposition}
+            onDelete={handleDeleteComposition}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
@@ -392,16 +419,19 @@ export function ProgressionScreen({
   navigation,
 }: RootStackScreenProps<"Progression">) {
   const state = useAsyncLoad<ProgressionData>(async () => {
-    const [sessions, templates, measurements, exercises] = await Promise.all([
-      workoutRepository.getCompletedSessions(),
-      workoutRepository.getTemplates(),
-      weightRepository.getMeasurements(),
-      workoutRepository.getExercises(),
-    ]);
+    const [sessions, templates, measurements, compositions, exercises] =
+      await Promise.all([
+        workoutRepository.getCompletedSessions(),
+        workoutRepository.getTemplates(),
+        weightRepository.getMeasurements(),
+        bodyCompositionRepository.getAll(),
+        workoutRepository.getExercises(),
+      ]);
     return {
       sessions,
       templates,
       measurements,
+      compositions,
       exerciseNames: buildExerciseNames(exercises),
       recommendations: buildRecommendations({
         sessions,
