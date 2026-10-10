@@ -6,3 +6,4 @@ export * from "./stats";
 export * from "./body";
 export * from "./progression";
 export * from "./activities";
+export * from "./backup";
